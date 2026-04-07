@@ -1,4 +1,4 @@
-# iCloud Downloader
+# iCloud Triage
 
 A local web app that lets you systematically work through your iCloud photo library — downloading batches, triaging each photo, and deleting originals from iCloud to free up storage while keeping everything safe on disk.
 
@@ -86,7 +86,7 @@ All app state (credentials, session cookies, photo index) is stored in `~/Pictur
 
 ## CLI usage
 
-You can also drive the downloader directly from Terminal (make sure the venv is active first: `source .venv/bin/activate`):
+You can also drive iCloud Triage directly from Terminal (make sure the venv is active first: `source .venv/bin/activate`):
 
 ```bash
 # Sync asset index from iCloud
