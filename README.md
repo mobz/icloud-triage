@@ -33,7 +33,7 @@ brew install ffmpeg
 ### 4. Start the app
 
 ```bash
-cd icloud-downloader
+cd icloud-triage # where you saved it (maybe Downloads) or require unzipping
 ./start.sh
 ```
 
