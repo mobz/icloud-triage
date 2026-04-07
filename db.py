@@ -2,7 +2,7 @@ import os
 import sqlite3
 import json
 
-DB_DIR = os.path.expanduser("~/.icloud-downloader")
+DB_DIR = os.path.expanduser("~/Pictures/icloud-triage/app-data")
 DB_PATH = os.path.join(DB_DIR, "db.sqlite")
 
 
@@ -163,7 +163,7 @@ def get_eligible_batch_asset_ids():
     conn = _connect()
     rows = conn.execute("""
         SELECT id FROM assets
-        WHERE status='pending' AND is_favorite=0 AND keep_forever=0
+        WHERE status='pending' AND keep_forever=0
         ORDER BY taken_at ASC LIMIT 10
     """).fetchall()
     conn.close()

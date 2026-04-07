@@ -94,7 +94,7 @@ def setup_verify():
     try:
         import pyicloud
         creds = db.get_credentials()
-        cookie_dir = os.path.expanduser("~/.icloud-downloader/cookies")
+        cookie_dir = os.path.expanduser("~/Pictures/icloud-triage/app-data/cookies")
         api = pyicloud.PyiCloudService(
             creds["apple_id"], creds["password"], cookie_directory=cookie_dir
         )
@@ -173,7 +173,7 @@ def stream(stream_id):
 # Photo serving
 # ---------------------------------------------------------------------------
 
-THUMB_DIR = os.path.expanduser("~/.icloud-downloader/thumbs")
+THUMB_DIR = os.path.expanduser("~/Pictures/icloud-triage/app-data/thumbs")
 THUMB_SIZE = (400, 400)
 VIDEO_EXTENSIONS = {".mov", ".mp4", ".m4v", ".avi", ".mkv", ".3gp"}
 

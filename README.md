@@ -30,24 +30,10 @@ brew install python
 brew install ffmpeg
 ```
 
-### 4. Download this project
-
-If you have git:
+### 4. Start the app
 
 ```bash
-git clone https://github.com/your-username/icloud-downloader.git
 cd icloud-downloader
-```
-
-Or download and unzip the project folder, then open Terminal and navigate into it:
-
-```bash
-cd ~/Downloads/icloud-downloader
-```
-
-### 5. Start the app
-
-```bash
 ./start.sh
 ```
 
@@ -66,17 +52,14 @@ The script creates a virtual environment, installs dependencies if needed, and s
 
 The app downloads photos in batches of 10 and presents them for review one batch at a time.
 
-### Making decisions
-
-Each photo in the triage grid has two action buttons:
+It works well to open the `~/Pictures/icloud-triage/triage` folder. This way you can preview files at full res while performing the traige operation.
 
 | Button | Action |
-|--------|--------|
-| **Archive** (box icon, default) | Save locally + delete from iCloud |
-| **Lock** (padlock icon) | Save locally + also keep in iCloud |
-| **Trash** (bin icon) | Delete from iCloud + save to `for-deletion/` for final review |
+| **Archive** | (the defatult) - Moves the local file into the `archive` directory
+| **Lock** | Leaves the file in icloud instead of removing it - this way it will be on your photo forever
+| **Delete** | Removes the file from icloud and Saves locally into the `for-deletion` directory
 
-Favorites (hearts) are shown for reference — you can still triage them however you like.
+Your favorites (hearts) are shown for reference — you can still triage them however you like.
 
 ### Submitting a batch
 
@@ -91,13 +74,14 @@ All files are saved under `~/Pictures/icloud-triage/`:
 
 ```
 ~/Pictures/icloud-triage/
-  archive/        ← archived or locked photos (import these into Photos.app)
-  for-deletion/   ← trashed (review before permanently deleting)
+  triage/         ← photos that are in the currect and next batch to be triaged
+  archive/        ← archived and locked photos (import these into Photos.app)
+  for-deletion/   ← trashed (review before permanently deleting if you like)
 ```
 
 ## App state
 
-All app state (credentials, session cookies, photo index) is stored in `~/.icloud-downloader/` with permissions 600.
+All app state (credentials, session cookies, photo index) is stored in `~/Pictures/icloud-triage/app-data/` alongside your photos.
 
 ## CLI usage
 

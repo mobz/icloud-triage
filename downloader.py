@@ -24,7 +24,7 @@ import db
 from auth import get_icloud_api, AuthRequired, TwoFactorRequired
 from config import TRIAGE_DIR, BATCH_SIZE
 
-THUMB_DIR = os.path.expanduser("~/.icloud-downloader/thumbs")
+THUMB_DIR = os.path.expanduser("~/Pictures/icloud-triage/app-data/thumbs")
 THUMB_SIZE = (400, 400)
 
 

@@ -7,7 +7,7 @@ from pyicloud.exceptions import (
 )
 import db
 
-COOKIE_DIR = os.path.expanduser("~/.icloud-downloader/cookies")
+COOKIE_DIR = os.path.expanduser("~/Pictures/icloud-triage/app-data/cookies")
 
 
 class AuthRequired(Exception):
