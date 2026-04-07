@@ -1,0 +1,646 @@
+{% extends "base.html" %}
+{% block title %}Triage — iCloud Downloader{% endblock %}
+
+{% block content %}
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 1: Dashboard                                               -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="triage-section" id="section-dashboard">
+  <div class="section-header">
+    <h2 class="section-title">iCloud Library</h2>
+    <button class="btn btn-ghost btn-sm" id="sync-btn" onclick="syncIndex()">Re-sync</button>
+  </div>
+  <div class="dashboard-stats">
+    <div class="stat">
+      <span class="stat-value" id="dash-pending-count">—</span>
+      <span class="stat-label">Pending</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="dash-pending-size">—</span>
+      <span class="stat-label">Est. Size</span>
+    </div>
+    <div class="stat">
+      <span class="stat-value" id="dash-kf-count">—</span>
+      <span class="stat-label">Keep Forever</span>
+    </div>
+  </div>
+  <div class="progress-wrap" id="sync-progress-wrap">
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="sync-progress-fill"></div>
+    </div>
+    <div class="progress-label" id="sync-progress-label"></div>
+    <div id="sync-type-counts" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:8px"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 2: Keep-Forever Strip                                      -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="triage-section" id="section-keep-forever">
+  <div class="section-header">
+    <h2 class="section-title">Keep Forever</h2>
+    <span class="section-meta" id="kf-total-size"></span>
+  </div>
+  <div class="kf-strip" id="kf-strip">
+    <div class="kf-empty" id="kf-empty">No keep-forever photos yet</div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 3: Triage Grid                                             -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="triage-section" id="section-triage">
+  <div class="section-header">
+    <h2 class="section-title">Triage</h2>
+    <span class="section-meta" id="triage-meta"></span>
+  </div>
+
+  <div class="triage-legend">
+    <span style="color:var(--success)">
+      <svg width="13" height="12" viewBox="0 0 17 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px" xmlns="http://www.w3.org/2000/svg"><rect x="1.5" y="1.5" width="14" height="3.5" rx="1"/><path d="M2 5v8.5a1 1 0 001 1h11a1 1 0 001-1V5"/><line x1="8.5" y1="7.5" x2="8.5" y2="11"/><polyline points="6.5 9.5 8.5 11.5 10.5 9.5"/></svg>
+      Archive = save locally + delete from iCloud
+    </span>
+    <span style="color:var(--accent)">
+      <svg width="11" height="13" viewBox="0 0 14 17" fill="currentColor" style="vertical-align:middle;margin-right:4px" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="8" width="12" height="9" rx="2"/><path d="M3.5 8V4.5a3.5 3.5 0 0 1 7 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Lock = also keep in iCloud
+    </span>
+    <span style="color:var(--danger)">
+      <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px" xmlns="http://www.w3.org/2000/svg"><path d="M6 2h4l1 1h3v1H2V3h3l1-1zM3 5h10l-.8 9H3.8L3 5zm3 2v5h1V7H6zm3 0v5h1V7H9z"/></svg>
+      Trash = delete from iCloud + save for review
+    </span>
+  </div>
+
+  <div id="triage-loading" class="triage-loading" style="display:none">
+    <div class="spinner"></div>
+    <span>Preparing next batch…</span>
+  </div>
+
+  <div id="triage-empty" class="triage-empty-state" style="display:none">
+    <p>All caught up! No more photos to triage.</p>
+  </div>
+
+  <div class="triage-grid" id="triage-grid"></div>
+
+  <div class="triage-actions" id="triage-actions" style="display:none">
+    <div class="triage-summary" id="triage-decision-summary"></div>
+    <button class="btn btn-primary" id="next-btn" onclick="submitNext()">
+      Next →
+    </button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 4: Download Progress                                       -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="triage-section" id="section-download-progress" style="display:none">
+  <div class="section-header">
+    <h2 class="section-title">Preparing Next Batch</h2>
+    <span class="section-meta" id="dl-progress-meta"></span>
+  </div>
+  <div class="progress-bar-track">
+    <div class="progress-bar-fill" id="dl-progress-fill"></div>
+  </div>
+  <div class="progress-label" id="dl-progress-label">Starting download…</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<!-- SECTION 5: Pending Summary                                         -->
+<!-- ═══════════════════════════════════════════════════════════════════ -->
+<div class="triage-section" id="section-pending">
+  <div class="section-header">
+    <h2 class="section-title">Still to Process</h2>
+    <span class="section-meta" id="pending-total-meta"></span>
+  </div>
+  <div id="pending-type-counts" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px"></div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ─────────────────────────────────────────────────────────────────────
+// State
+// ─────────────────────────────────────────────────────────────────────
+// decisions: { asset_id: "archive" | "lock" | "trash" }
+// "archive" = save locally + delete from iCloud (default)
+// "lock"    = save locally + KEEP in iCloud
+// "trash"   = save to for-review + delete from iCloud
+let decisions = {};
+let currentAssets = [];
+let kfAssetIds = new Set();       // tracks IDs already rendered in the keep-forever strip
+let currentPreloadStreamId = null; // the stream ID of the active preload (next batch)
+
+// ─────────────────────────────────────────────────────────────────────
+// Utilities
+// ─────────────────────────────────────────────────────────────────────
+function formatBytes(bytes) {
+  if (!bytes) return '—';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+  return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+}
+
+function renderTypeBadges(byExt, container) {
+  const sorted = Object.entries(byExt).sort((a, b) => b[1] - a[1]);
+  container.innerHTML = sorted.map(([ext, cnt]) =>
+    `<span class="type-badge"><strong>${ext}</strong> ${cnt.toLocaleString()}</span>`
+  ).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 1: Dashboard + Re-sync
+// ─────────────────────────────────────────────────────────────────────
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/stats/dashboard');
+    const d = await res.json();
+    document.getElementById('dash-pending-count').textContent =
+      d.pending_count != null ? d.pending_count.toLocaleString() : '—';
+    document.getElementById('dash-pending-size').textContent = formatBytes(d.pending_bytes);
+    document.getElementById('dash-kf-count').textContent =
+      d.keep_forever_count != null ? d.keep_forever_count.toLocaleString() : '—';
+  } catch (e) {}
+}
+
+async function syncIndex() {
+  const btn = document.getElementById('sync-btn');
+  btn.disabled = true;
+
+  const res = await fetch('/sync-index', { method: 'POST' });
+  const data = await res.json();
+  if (!data.stream_id) { btn.disabled = false; return; }
+
+  const wrap = document.getElementById('sync-progress-wrap');
+  wrap.classList.add('visible');
+  const fill = document.getElementById('sync-progress-fill');
+  const label = document.getElementById('sync-progress-label');
+  const typeCounts = document.getElementById('sync-type-counts');
+
+  const es = new EventSource(`/stream/${data.stream_id}`);
+  es.onmessage = (e) => {
+    const text = e.data;
+    if (text.startsWith('SYNC_TOTAL:')) {
+      const total = parseInt(text.split(':')[1]);
+      label.textContent = `Syncing ${total.toLocaleString()} assets…`;
+    } else if (text.startsWith('SYNC_PROGRESS:')) {
+      const parts = text.replace('SYNC_PROGRESS: ', '').split(/\s{2,}/);
+      const [done, tot] = parts[0].split('/').map(Number);
+      if (tot) fill.style.width = Math.round((done / tot) * 100) + '%';
+      label.textContent = `Synced ${done.toLocaleString()} / ${tot.toLocaleString()}`;
+      renderSyncTypeBadges(parts.slice(1), typeCounts);
+    } else if (text.startsWith('SYNC_DONE:')) {
+      const parts = text.replace('SYNC_DONE: ', '').split(/\s{2,}/);
+      fill.style.width = '100%';
+      label.textContent = `Sync complete — ${parseInt(parts[0]).toLocaleString()} assets`;
+      renderSyncTypeBadges(parts.slice(1), typeCounts);
+    } else if (text.startsWith('AUTH_ERROR:')) {
+      label.textContent = 'Auth error — go to Settings to re-authenticate.';
+      es.close(); btn.disabled = false;
+    }
+  };
+  es.addEventListener('done', () => {
+    es.close();
+    btn.disabled = false;
+    loadDashboard();
+    loadPendingSummary();
+    if (currentAssets.length === 0) {
+      loadTriageGrid();
+    }
+  });
+  es.onerror = () => { es.close(); btn.disabled = false; };
+}
+
+function renderSyncTypeBadges(pairs, container) {
+  container.innerHTML = pairs.map(p => {
+    const [type, count] = p.split(':');
+    return `<span class="type-badge"><strong>${type}</strong> ${parseInt(count).toLocaleString()}</span>`;
+  }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 2: Keep-forever strip
+// ─────────────────────────────────────────────────────────────────────
+function kfThumbHtml(a) {
+  return `<div class="kf-thumb">
+    <img src="/thumb/${encodeAssetId(a.id)}" alt="${escHtml(a.filename)}" loading="lazy">
+  </div>`;
+}
+
+// Full load — called once on page load. Renders all items oldest→newest (left→right)
+// and scrolls to the right so the most recent are visible.
+async function loadKeepForeverStrip() {
+  try {
+    const res = await fetch('/api/keep-forever/strip');
+    const data = await res.json();
+    const strip = document.getElementById('kf-strip');
+    const empty = document.getElementById('kf-empty');
+    const meta = document.getElementById('kf-total-size');
+
+    meta.textContent = data.total_bytes ? formatBytes(data.total_bytes) : '';
+
+    if (!data.assets || data.assets.length === 0) {
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    // API returns newest-first; reverse so strip reads oldest→newest left→right
+    const ordered = [...data.assets].reverse();
+    strip.innerHTML = ordered.map(kfThumbHtml).join('');
+    kfAssetIds = new Set(data.assets.map(a => a.id));
+
+    // Scroll to right so newest are visible
+    requestAnimationFrame(() => { strip.scrollLeft = strip.scrollWidth; });
+  } catch (e) {}
+}
+
+// Incremental update — called after Next. Appends only newly added keep-forever
+// items to the right of the strip without disturbing scroll position.
+async function appendKeepForeverStrip() {
+  try {
+    const res = await fetch('/api/keep-forever/strip');
+    const data = await res.json();
+    const strip = document.getElementById('kf-strip');
+    const empty = document.getElementById('kf-empty');
+    const meta = document.getElementById('kf-total-size');
+
+    meta.textContent = data.total_bytes ? formatBytes(data.total_bytes) : '';
+
+    if (!data.assets || data.assets.length === 0) return;
+
+    // Find assets not yet in the strip
+    const newAssets = data.assets.filter(a => !kfAssetIds.has(a.id));
+    if (newAssets.length === 0) return;
+
+    if (empty) empty.style.display = 'none';
+
+    // API returns newest-first; reverse so we append in chronological order
+    [...newAssets].reverse().forEach(a => {
+      const tmp = document.createElement('div');
+      tmp.innerHTML = kfThumbHtml(a);
+      strip.appendChild(tmp.firstChild);
+      kfAssetIds.add(a.id);
+    });
+
+    // Scroll to reveal newly added items on the right
+    requestAnimationFrame(() => { strip.scrollLeft = strip.scrollWidth; });
+  } catch (e) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 3: Triage grid
+// ─────────────────────────────────────────────────────────────────────
+function encodeAssetId(id) {
+  // asset IDs may contain slashes — Flask handles <path:asset_id>
+  // but we need to not double-encode the slashes in the URL
+  return id.split('/').map(encodeURIComponent).join('/');
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function buildCardHtml(a) {
+  const date = a.taken_at ? a.taken_at.slice(0, 10) : '';
+  return `
+    <div class="triage-card" id="card-${CSS.escape(a.id)}" data-id="${escHtml(a.id)}">
+      <div class="triage-thumb-wrap">
+        <img src="/thumb/${encodeAssetId(a.id)}" alt="${escHtml(a.filename)}" loading="lazy">
+        ${a.media_type && a.media_type !== 'photo'
+          ? `<span class="media-type-badge">${escHtml(a.media_type)}</span>`
+          : ''}
+        ${a.is_favorite
+          ? `<span class="heart-badge">
+              <svg width="12" height="11" viewBox="0 0 14 13" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 12C7 12 1 8 1 4.5a3 3 0 0 1 6-0.5 3 3 0 0 1 6 0.5C13 8 7 12 7 12Z"/>
+              </svg>
+             </span>`
+          : ''}
+        <div class="triage-overlays">
+          <button class="triage-icon-btn archive-btn" onclick="toggleDecision('${escHtml(a.id)}','archive')" title="Archive + delete from iCloud">
+            <svg width="17" height="16" viewBox="0 0 17 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1.5" y="1.5" width="14" height="3.5" rx="1"/>
+              <path d="M2 5v8.5a1 1 0 001 1h11a1 1 0 001-1V5"/>
+              <line x1="8.5" y1="7.5" x2="8.5" y2="11"/>
+              <polyline points="6.5 9.5 8.5 11.5 10.5 9.5"/>
+            </svg>
+          </button>
+          <button class="triage-icon-btn lock-btn" onclick="toggleDecision('${escHtml(a.id)}','lock')" title="Also keep in iCloud">
+            <svg class="icon-lock-open" width="14" height="17" viewBox="0 0 14 17" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="1" y="8" width="12" height="9" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M3.5 8V3.5a3.5 3.5 0 0 1 7 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+            <svg class="icon-lock-closed" width="14" height="17" viewBox="0 0 14 17" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="display:none">
+              <rect x="1" y="8" width="12" height="9" rx="2"/>
+              <path d="M3.5 8V4.5a3.5 3.5 0 0 1 7 0V8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="triage-icon-btn trash-btn" onclick="toggleDecision('${escHtml(a.id)}','trash')" title="Delete from iCloud + save for review">
+            <svg class="icon-trash-outline" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M6 2h4l1 1h3v1H2V3h3l1-1z" stroke="currentColor" stroke-width="1.3" fill="none"/>
+              <path d="M3 5h10l-.8 9H3.8L3 5z" stroke="currentColor" stroke-width="1.3" fill="none"/>
+              <line x1="6" y1="8" x2="6" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+              <line x1="10" y1="8" x2="10" y2="12" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+            </svg>
+            <svg class="icon-trash-filled" width="16" height="16" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="display:none">
+              <path d="M6 2h4l1 1h3v1H2V3h3l1-1zM3 5h10l-.8 9H3.8L3 5zm3 2v5h1V7H6zm3 0v5h1V7H9z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="triage-card-footer">
+        <span class="photo-name" title="${escHtml(a.filename)}">${escHtml(a.filename)}</span>
+        ${date ? `<span class="photo-date">${date}</span>` : ''}
+      </div>
+    </div>`;
+}
+
+function renderTriageGrid(assets) {
+  const grid = document.getElementById('triage-grid');
+  const actions = document.getElementById('triage-actions');
+  const loading = document.getElementById('triage-loading');
+  const empty = document.getElementById('triage-empty');
+  const meta = document.getElementById('triage-meta');
+
+  loading.style.display = 'none';
+
+  if (!assets || assets.length === 0) {
+    grid.innerHTML = '';
+    actions.style.display = 'none';
+    empty.style.display = 'block';
+    meta.textContent = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  actions.style.display = 'flex';
+  meta.textContent = `${assets.length} photos`;
+
+  currentAssets = assets;
+  decisions = {};
+  assets.forEach(a => { decisions[a.id] = 'archive'; });
+
+  grid.innerHTML = assets.map(buildCardHtml).join('');
+  assets.forEach(a => updateCardVisuals(a.id));
+  updateDecisionSummary();
+}
+
+// Appends newly-downloaded assets to an existing triage grid without resetting it.
+function appendToTriageGrid(newAssets) {
+  if (!newAssets || newAssets.length === 0) return;
+  const grid = document.getElementById('triage-grid');
+  const meta = document.getElementById('triage-meta');
+  const actions = document.getElementById('triage-actions');
+  const empty = document.getElementById('triage-empty');
+
+  empty.style.display = 'none';
+  actions.style.display = 'flex';
+
+  newAssets.forEach(a => {
+    decisions[a.id] = 'archive';
+    currentAssets.push(a);
+    const tmp = document.createElement('div');
+    tmp.innerHTML = buildCardHtml(a);
+    grid.appendChild(tmp.firstElementChild);
+    updateCardVisuals(a.id);
+  });
+
+  meta.textContent = `${currentAssets.length} photos`;
+  updateDecisionSummary();
+}
+
+// Called when a download stream finishes and the grid is already showing items.
+// Promotes any newly-ready assets and appends them to the current batch.
+async function topUpTriageGrid() {
+  try {
+    const res = await fetch('/api/triage/top-up', { method: 'POST' });
+    const data = await res.json();
+    if (data.new_assets && data.new_assets.length > 0) {
+      appendToTriageGrid(data.new_assets);
+    }
+    // No download spawning here — next batch was already started by api_triage_next
+  } catch (e) {}
+}
+
+function updateCardVisuals(assetId) {
+  const d = decisions[assetId];
+  const card = document.querySelector(`.triage-card[data-id="${CSS.escape(assetId)}"]`);
+  if (!card) return;
+
+  const archiveBtn = card.querySelector('.archive-btn');
+  const lockBtn    = card.querySelector('.lock-btn');
+  const trashBtn   = card.querySelector('.trash-btn');
+
+  // Archive: active when not trash
+  archiveBtn.classList.toggle('active-archive', d !== 'trash');
+
+  // Lock: active only when decision is "lock"
+  lockBtn.classList.toggle('active', d === 'lock');
+  lockBtn.querySelector('.icon-lock-open').style.display   = d === 'lock' ? 'none' : '';
+  lockBtn.querySelector('.icon-lock-closed').style.display = d === 'lock' ? '' : 'none';
+
+  // Trash
+  trashBtn.classList.toggle('active-danger', d === 'trash');
+  trashBtn.querySelector('.icon-trash-outline').style.display = d === 'trash' ? 'none' : '';
+  trashBtn.querySelector('.icon-trash-filled').style.display  = d === 'trash' ? '' : 'none';
+
+  // Card border
+  card.classList.toggle('decision-lock',  d === 'lock');
+  card.classList.toggle('decision-trash', d === 'trash');
+}
+
+function toggleDecision(assetId, action) {
+  const current = decisions[assetId];
+
+  if (action === 'archive') {
+    if (current !== 'trash') return;
+    decisions[assetId] = 'archive';
+    updateCardVisuals(assetId);
+    updateDecisionSummary();
+    return;
+  }
+
+  if (action === 'lock') {
+    if (current === 'trash') return; // lock disabled when trash active
+    decisions[assetId] = (current === 'lock') ? 'archive' : 'lock';
+  }
+
+  if (action === 'trash') {
+    decisions[assetId] = (current === 'trash') ? 'archive' : 'trash';
+  }
+
+  updateCardVisuals(assetId);
+  updateDecisionSummary();
+}
+
+function updateDecisionSummary() {
+  const counts = { archive: 0, lock: 0, trash: 0 };
+  Object.values(decisions).forEach(d => {
+    if (d === 'lock') counts.lock++;
+    else if (d === 'trash') counts.trash++;
+    else counts.archive++;
+  });
+  const parts = [];
+  if (counts.archive) parts.push(`${counts.archive} archive`);
+  if (counts.lock)    parts.push(`${counts.lock} keep`);
+  if (counts.trash)   parts.push(`${counts.trash} trash`);
+  document.getElementById('triage-decision-summary').textContent = parts.join(' · ');
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 3: Next button
+// ─────────────────────────────────────────────────────────────────────
+async function submitNext() {
+  const btn = document.getElementById('next-btn');
+  btn.disabled = true;
+  btn.textContent = 'Processing…';
+
+  try {
+    const res = await fetch('/api/triage/next', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ decisions }),
+    });
+    const data = await res.json();
+
+    if (data.summary && data.summary.errors && data.summary.errors.length > 0) {
+      console.warn('Triage errors:', data.summary.errors);
+    }
+
+    renderTriageGrid(data.triage_assets);
+    loadDashboard();
+    appendKeepForeverStrip();
+    loadPendingSummary();
+
+    if (data.stream_id) {
+      startDownloadProgress(data.stream_id);
+    }
+  } catch (e) {
+    console.error('Next failed:', e);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Next →';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 4: Download progress
+// ─────────────────────────────────────────────────────────────────────
+function startDownloadProgress(streamId) {
+  currentPreloadStreamId = streamId;  // mark this as the current preload
+  const section = document.getElementById('section-download-progress');
+  const fill = document.getElementById('dl-progress-fill');
+  const label = document.getElementById('dl-progress-label');
+  const meta = document.getElementById('dl-progress-meta');
+
+  section.style.display = 'block';
+  fill.style.width = '0%';
+  label.textContent = 'Starting…';
+  meta.textContent = '';
+
+  const es = new EventSource(`/stream/${streamId}`);
+
+  es.onmessage = (e) => {
+    const text = e.data;
+    if (text.startsWith('BATCH_START:')) {
+      label.textContent = text.replace('BATCH_START: ', '');
+    } else if (text.startsWith('SCAN_START:')) {
+      label.textContent = 'Scanning library…';
+    } else if (text.startsWith('SCAN_PROGRESS:')) {
+      label.textContent = text.replace('SCAN_PROGRESS: ', 'Scanning — ');
+    } else if (text.startsWith('SCAN_DONE:')) {
+      label.textContent = 'Found assets, downloading…';
+      fill.style.width = '10%';
+    } else if (text.startsWith('PROGRESS:')) {
+      const m = text.match(/(\d+)\/(\d+)/);
+      if (m) {
+        const pct = Math.round((parseInt(m[1]) / parseInt(m[2])) * 100);
+        fill.style.width = pct + '%';
+        meta.textContent = `${m[1]}/${m[2]}`;
+      }
+      label.textContent = text.replace('PROGRESS: ', '');
+    } else if (text.startsWith('BATCH_DONE:') || text.startsWith('BATCH_EMPTY:')) {
+      fill.style.width = '100%';
+      label.textContent = text.replace('BATCH_DONE: ', '').replace('BATCH_EMPTY: ', '');
+    } else if (text.startsWith('AUTH_ERROR:')) {
+      label.textContent = 'Auth error — go to Settings.';
+      es.close();
+    }
+  };
+
+  es.addEventListener('done', () => {
+    es.close();
+    section.style.display = 'none';
+    if (currentAssets.length === 0) {
+      // Nothing in triage yet — promote and show whatever just finished
+      loadTriageGrid();
+    } else if (streamId !== currentPreloadStreamId) {
+      // This was an older stream (user clicked Next before it finished) —
+      // top up the current triage batch with the remaining assets
+      topUpTriageGrid();
+    }
+    // If streamId === currentPreloadStreamId: preload finished normally,
+    // batch is waiting in downloading_next for the user to click Next
+  });
+
+  es.onerror = () => es.close();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Section 5: Pending summary
+// ─────────────────────────────────────────────────────────────────────
+async function loadPendingSummary() {
+  try {
+    const res = await fetch('/api/stats/pending-breakdown');
+    const d = await res.json();
+    const meta = document.getElementById('pending-total-meta');
+    meta.textContent = `${d.total.toLocaleString()} assets · ${formatBytes(d.total_bytes)}`;
+    const container = document.getElementById('pending-type-counts');
+    renderTypeBadges(d.by_extension || {}, container);
+  } catch (e) {}
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Initial triage grid load
+// ─────────────────────────────────────────────────────────────────────
+async function loadTriageGrid() {
+  const loading = document.getElementById('triage-loading');
+  loading.style.display = 'flex';
+  document.getElementById('triage-grid').innerHTML = '';
+  document.getElementById('triage-actions').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/triage/start', { method: 'POST' });
+    const data = await res.json();
+
+    if (data.triage_assets && data.triage_assets.length > 0) {
+      renderTriageGrid(data.triage_assets);
+    } else if (data.status === 'downloading' || data.stream_id) {
+      loading.style.display = 'flex';
+      if (data.stream_id) {
+        startDownloadProgress(data.stream_id);
+      }
+    } else {
+      loading.style.display = 'none';
+      document.getElementById('triage-empty').style.display = 'block';
+    }
+
+    if (data.stream_id && data.triage_assets && data.triage_assets.length > 0) {
+      startDownloadProgress(data.stream_id);
+    }
+  } catch (e) {
+    loading.style.display = 'none';
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Boot
+// ─────────────────────────────────────────────────────────────────────
+loadDashboard();
+loadKeepForeverStrip();
+loadPendingSummary();
+loadTriageGrid();
+</script>
+{% endblock %}

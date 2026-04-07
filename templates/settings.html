@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Settings — iCloud Downloader{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width:480px">
+  <h2 style="font-size:18px;font-weight:600;margin-bottom:20px">Settings</h2>
+
+  <div class="form-group">
+    <label>Apple ID</label>
+    <div style="padding:10px 14px;background:var(--surface2);border:1px solid var(--border);
+                border-radius:8px;color:var(--text-muted)">{{ apple_id }}</div>
+  </div>
+
+  <form method="POST" action="{{ url_for('settings_re_auth') }}"
+        onsubmit="return confirm('This will clear your session and require you to sign in again. Continue?')">
+    <button type="submit" class="btn btn-ghost">Re-authenticate</button>
+  </form>
+</div>
+{% endblock %}

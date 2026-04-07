@@ -1,0 +1,4 @@
+pyicloud
+flask
+pillow
+pillow-heif
