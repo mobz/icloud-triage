@@ -55,11 +55,12 @@ The app downloads photos in batches of 10 and presents them for review one batch
 It works well to open the `~/Pictures/icloud-triage/triage` folder. This way you can preview files at full res while performing the traige operation.
 
 | Button | Action |
-| **Archive** | (the defatult) - Moves the local file into the `archive` directory
-| **Lock** | Leaves the file in icloud instead of removing it - this way it will be on your photo forever
-| **Delete** | Removes the file from icloud and Saves locally into the `for-deletion` directory
+|--------|--------|
+| **Archive** | (the defatult) - Removes the file from icloud and saves it locally into the `archive` directory |
+| **Lock** | Leaves the file in icloud instead of removing it - this way it will be on your photo forever |
+| **Delete** | Removes the file from icloud and saves locally into the `for-deletion` directory |
 
-Your favorites (hearts) are shown for reference — you can still triage them however you like.
+Your favorites (hearts) are shown for reference — you can still triage them however you like, but they are locked by default.
 
 ### Submitting a batch
 
