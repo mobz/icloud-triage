@@ -20,10 +20,8 @@ build/
 # Editor
 .idea/
 .vscode/
+.claude
 
 # App runtime data
 *.sqlite
 *.db
-
-# Dev scripts
-dev-reset.sh
