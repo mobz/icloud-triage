@@ -380,7 +380,7 @@ function renderTriageGrid(assets) {
 
   currentAssets = assets;
   decisions = {};
-  assets.forEach(a => { decisions[a.id] = 'archive'; });
+  assets.forEach(a => { decisions[a.id] = a.is_favorite ? 'lock' : 'archive'; });
 
   grid.innerHTML = assets.map(buildCardHtml).join('');
   assets.forEach(a => updateCardVisuals(a.id));
@@ -399,7 +399,7 @@ function appendToTriageGrid(newAssets) {
   actions.style.display = 'flex';
 
   newAssets.forEach(a => {
-    decisions[a.id] = 'archive';
+    decisions[a.id] = a.is_favorite ? 'lock' : 'archive';
     currentAssets.push(a);
     const tmp = document.createElement('div');
     tmp.innerHTML = buildCardHtml(a);
